@@ -1,0 +1,5 @@
+services:
+  closer-v3:
+    build: .
+    volumes:
+      - .:/app  # Maps your current folder to the /app folder in the container

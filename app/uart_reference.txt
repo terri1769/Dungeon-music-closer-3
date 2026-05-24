@@ -1,0 +1,10 @@
+Communication Protocol (UART Reference)
+Use these strings in your write and read functions to keep the two boards synced.
+Command          (Direction)      Meaning
+ID:[HEX]         (Pico > Pi)      NFC Tag scanned.
+VOL:[0-100]      (Pico > Pi)      Knob turned to specific percentage.
+CMD:BIG_BUTTON   (Pico > Pi)      Shielded button pressed.
+SET_HALO:[MODE]  (Pi > Pico)      Change LED behavior (NORMAL, RED_PULSE, etc.).
+AUTH_PASS        (Pi > Pico)      Trigger Green Flash.
+AUTH_FAIL        (Pi > Pico)      Trigger Red Flash.
+SYNC_VOL:[0-100] (Pi > Pico)      Match Halo to software volume (during ducking).

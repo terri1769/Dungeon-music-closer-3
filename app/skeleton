@@ -1,0 +1,65 @@
+# =================================================================
+# DUNGEON CLOSER V3 - PI 5 MASTER LOGIC SKELETON
+# =================================================================
+
+# --- LIBRARIES ---
+# Import pandas or odfpy (for ODS schedule reading)
+# Import yaml or json (for access_control database)
+# Import pygame.mixer or alsaaudio (for HiFiBerry audio/ducking)
+# Import serial (for Pico 2 Comms)
+
+# --- CONFIGURATION & DATABASE ---
+# Load access_control.yaml (Levels: Owner, Admin, User)
+# Load schedule.ods (Events, Times, Message Triggers)
+# Current_Session_Index = 0
+# Auth_Level = "USER" (Default No Access)
+
+# --- MODULE: ACCESS CONTROL ---
+def validate_credential(data):
+    """
+    Triggered by NFC ID or Touchscreen Passcode.
+    Checks data against access_control database.
+    Updates Global Auth_Level.
+    Sends 'SET_HALO:FLASH_GREEN' or 'RED' back to Pico.
+    """
+    pass
+
+# --- MODULE: SCHEDULER & SESSION ---
+def load_next_session():
+    """
+    Parses ODS to find the next scheduled event.
+    Sets timers for -30, -15, -5, and 0 minute marks.
+    Updates UI on 7" Screen.
+    """
+    pass
+
+def trigger_audio_event(message_type):
+    """
+    Handles 'Ducking':
+    1. Ramp down background music gain.
+    2. Play announcement audio file.
+    3. Ramp background music back up.
+    """
+    pass
+
+# --- MODULE: THE BIG BUTTON LOGIC (HYBRID MODEL) ---
+def process_big_button():
+    """
+    Logic requested:
+    IF State == COUNTDOWN:
+        IF Auth_Level >= ADMIN: Start 'Zero Hour' early.
+        ELSE: Ignore (or send AUTH_REQUIRED error to Pico).
+    
+    IF State == ZERO_HOUR:
+        # OPEN ACCESS: Any DM can stop the noise.
+        Kill audio.
+        Run load_next_session().
+        Send 'SET_HALO:FLASH_BLUE' to Pico.
+    """
+    pass
+
+# --- MAIN SERVICE LOOP ---
+# 1. Listen for Pico 2 UART commands (ID, VOL, BIG_BUTTON).
+# 2. Monitor Event Timers (-5, 0, etc.).
+# 3. Update Touchscreen UI (Faders, Time Left, Next Event).
+# 4. Handle Passcode input from Touchscreen.

@@ -1,0 +1,15 @@
+# Web Framework & UI
+nicegui
+
+# Hardware Communication (Standard for Pi projects)
+pyserial          # To talk to the Pico 2 via USB/Serial
+smbus2            # For I2C communication (likely needed for the M5Stack Dial)
+RPi.GPIO          # Basic GPIO control (if needed on the Pi 5)
+
+# Audio Handling (Since you have the Audio Injector Zero)
+pygame            # Great for simple sound effects and playback
+python-osc        # Optional: if you plan to send/receive Open Sound Control messages
+
+# Utilities
+requests          # For making API calls to other services or Max Overkill
+python-dotenv     # To manage environment variables and secrets safely
