@@ -31,13 +31,12 @@ ntplib
 
 
 Hardware:
-Raspberry Pi 4B.  Boots from either Micro SD card or USB device.  I prefer USB SSD.
+Raspberry Pi 5, 4GB.  Boots from either NVME, with microd SD card as emergency backup (cloned)
+Boots Raspberry Pi OS Lite 64bit
 Audioinjector Zero Raspberry Pi Sound Card.  https://www.audioinjector.net/rpi-zero
-Display  #TODO determine and document display
-MP3 WMA Decoder Board USB  tinyurl.com/2abgvbfh
-SSD or microSD for Raspberry Pi OS Lite 64bit
+Display  Rasoberry Pi 7" DSI display
 Thumb drive for close music and config
-Real Time Clock module  tinyurl.com/2aayxw4m
+Real Time Clock module with battery backup built in to Pi 5
     
 
 Instructions for use:

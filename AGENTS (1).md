@@ -25,7 +25,7 @@ A dedicated, localized automation controller for an offsite BDSM dungeon environ
 - Line in (aux) via Audio Injector Zero
 - Bluetooth (A2DP sink)
 - USB thumb drive (local playback)
-- Downloaded Spotify (music source)
+- Downloaded Spotify (offline clearing playlist)
 
 ---
 
@@ -83,12 +83,15 @@ Announcement messages support dynamic variables: `$now`, `$minutes`.
 The MEMS microphone on the second I2S channel monitors real-time ambient sound levels. The outgoing audio signal is subtracted from the ambient reading to prevent hysteresis feedback loops (where increasing volume causes the system to increase volume further). TTS announcement volume and music ducking depth are adjusted dynamically based on the compensated ambient level. A baseline noise profile is captured at system startup.
 
 ### Music Ducking
-Handled by PipeWire/WirePlumber via per-node volume control. When a TTS announcement fires:
-1. Music node volume is lowered
-2. Piper TTS audio plays
-3. Music node volume restores to pre-duck level
+Handled by PipeWire/WirePlumber via per-node volume control. Music is ducked to **complete silence (zero)** on every announcement — duck depth is always zero, no exceptions. The pre-duck volume level is saved and fully restored after the announcement completes.
 
-Fallback: if ambient sensing logic fails, system falls back to static ducking values.
+1. Save current music node volume
+2. Ramp music node to zero
+3. Piper TTS audio plays
+4. Restore music node to saved volume level
+
+### Ambient Sound Compensation (Separate from Ducking)
+The MEMS microphone is used for **live music volume adjustment during normal playback** — not for controlling duck depth. Duck depth is always zero regardless of ambient conditions. The ambient sensing system monitors room noise levels in real time, subtracts the known outgoing audio signal to prevent feedback loops, and adjusts the music playback volume up or down to maintain consistent perceived loudness as the crowd noise changes throughout an event. A baseline noise profile is captured at system startup.
 
 ### Early Close / Cancel Toggle
 - A configurable time window before close allows manual trigger of the closing sequence
@@ -214,12 +217,13 @@ class PiperTTS:
 The `calendar_engine.py` announcement trigger calls into `audio_logic.py` using the following sequence:
 
 1. Resolve the announcement text — substitute `$minutes` and `$now` variables
-2. Call `duck_music(target_volume)` to lower the PipeWire music node
-3. Call `tts.speak(resolved_text)` — audio streams immediately
-4. Wait for Piper output to complete (monitor subprocess or use a timed estimate)
-5. Call `restore_music()` to ramp music back to pre-duck level
+2. Save current music node volume
+3. Call `duck_music()` to ramp the PipeWire music node to **zero**
+4. Call `tts.speak(resolved_text)` — audio streams immediately
+5. Wait for Piper output to complete (monitor subprocess or use a timed estimate)
+6. Call `restore_music()` to ramp music back to the saved pre-duck volume level
 
-Duck depth is dynamically adjusted based on the compensated ambient level from the MEMS microphone. If ambient sensing is unavailable, a static fallback duck depth defined in `config.cfg` is used.
+Duck depth is always zero. The ambient sensing system operates independently and handles live volume adjustment during normal playback — it does not influence ducking behavior.
 
 ### Message Template Resolution
 Announcement message templates are stored in `config.cfg`. Example:
@@ -245,84 +249,7 @@ def resolve_message(template: str, minutes: int) -> str:
 
 ---
 
-## 12. Deployment Architecture
-
-### Rationale: Native systemd, Not Docker
-The Dungeon Closer runs as native systemd services rather than Docker containers. Key reasons:
-
-- **Audio hardware access:** PipeWire runs as a user-session service. Routing container audio through the host PipeWire socket adds permission complexity and introduces latency variability that is unacceptable for real-time announcement ducking.
-- **Device pass-through complexity:** The Audio Injector Zero (I2S HAT), MEMS microphone, M5 Dial (USB-Serial), and DSI touchscreen all require direct, stable device access. Container device mappings add brittleness when device paths shift on boot.
-- **Single-purpose appliance:** This system runs one stack on one piece of hardware and never migrates. Docker's portability and isolation benefits do not apply.
-- **Ambient sensing latency:** Real-time MEMS mic capture and signal subtraction require the lowest possible latency path to hardware. Container overhead is an unnecessary variable.
-
-Docker is appropriate for ancillary services that do **not** touch audio hardware — for example, a logging aggregator or management dashboard running on Max Overkill that communicates with the Closer over the network.
-
-### systemd Service Layout
-
-Each major subsystem runs as its own user-level systemd service. This mirrors the Klipper/Moonraker service pattern.
-
-| Service Unit | Description | Restart Policy |
-|---|---|---|
-| `closer-main.service` | NiceGUI / FastAPI web server; serves touchscreen and mobile UI | `on-failure` |
-| `closer-calendar.service` | Background scheduler; fires announcement triggers; manages alarm series | `on-failure` |
-| `closer-m5bridge.service` | Serial handler for M5 Dial; encoder, NFC, button events | `on-failure` |
-| `closer-network.service` | WiFi detection; AP mode switching | `on-failure` |
-
-`audio_logic.py` and `auth_manager.py` are imported as modules by the services that need them — they do not run as standalone services.
-
-### Service Dependencies
-```
-closer-network.service  (starts first — establishes AP or joins WiFi)
-        ↓
-closer-main.service     (NiceGUI depends on network being up)
-closer-calendar.service (independent; starts after network)
-closer-m5bridge.service (independent; starts after network)
-```
-
-### Enabling Services
-```bash
-# Enable all Closer services at boot
-sudo systemctl enable closer-network.service
-sudo systemctl enable closer-main.service
-sudo systemctl enable closer-calendar.service
-sudo systemctl enable closer-m5bridge.service
-
-# Start immediately without rebooting
-sudo systemctl start closer-network.service closer-main.service \
-    closer-calendar.service closer-m5bridge.service
-```
-
-### Example Service Unit (`closer-main.service`)
-```ini
-[Unit]
-Description=Dungeon Closer — NiceGUI Web Server
-After=network.target closer-network.service
-Wants=closer-network.service
-
-[Service]
-Type=simple
-User=closer
-WorkingDirectory=/home/closer/dungeon-closer
-ExecStart=/home/closer/venv/bin/python main.py
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Python Virtual Environment
-All Python dependencies are installed into a dedicated venv to keep the system Python clean:
-
-```bash
-python3 -m venv /home/closer/venv
-source /home/closer/venv/bin/activate
-pip install nicegui piper-tts pyyaml pyserial
-```
-
----
-
-## 13. Developer Notes
+## 12. Developer Notes
 
 - M5 Dial **must** be flashed with UIFlow 2.0 (MicroPython) via M5Burner before use with the MicroPico extension
 - Use `snake_case` for all Python function and variable names
@@ -333,7 +260,7 @@ pip install nicegui piper-tts pyyaml pyserial
 
 ---
 
-## 14. Version History
+## 11. Version History
 
 | Version | Key Changes |
 |---|---|
